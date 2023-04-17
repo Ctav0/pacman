@@ -3,22 +3,33 @@ import random
 import time
 
 import pygame
+
 score = 0
 food_count = 0
 symbol = ' '
 update = True
+ENEMY_X = 0
+ENEMY_Y = 0
 PACKMAN_X = 0
 PACKMAN_Y = 0
-width = 20
-height = 10
+width = 14
+height = 12
 block_size = 80
 open = True
 pole = []
+
+start_time = time.perf_counter()
+
 direction = "right"
-enemy = 0
+enemy_last_time = 0
+
+enemy_s = "&"
+pacman_s = "@"
+
+
 def draw_pacman(screen, x, y):
     surface = pygame.Surface((block_size, block_size))
-    pygame.draw.circle(surface, (255, 0, 0), (block_size // 2, block_size // 2), block_size // 2)
+    pygame.draw.circle(surface, (21,148,139), (block_size // 2, block_size // 2), block_size // 2)
     pygame.draw.circle(surface, (0, 0, 0), (block_size // 2, block_size // 2 * 0.5), block_size // 10)
     if open:
         pygame.draw.polygon(surface, (0, 0, 0), [(block_size // 2, block_size // 2), (block_size, block_size),
@@ -35,15 +46,17 @@ def draw_pacman(screen, x, y):
 
     screen.blit(surface, (x, y))
 
-def draw_enemy(screen, x,y):
-    surface = pygame.Surface((block_size,block_size))
 
-    pygame.draw.circle(surface, (11, 252, 3),(block_size // 2,block_size // 4),block_size // 4)
-    pygame.draw.rect(surface, (11, 252, 3),(block_size // 4 + 1,block_size // 4,block_size // 2 - 1,block_size // 2 + block_size //4))
-    pygame.draw.circle(surface, (0,0,0), (block_size // 2 + 5, block_size // 2 * 0.5),block_size // 15)
+def draw_enemy(screen, x, y):
+    surface = pygame.Surface((block_size, block_size))
+
+    pygame.draw.circle(surface, (11, 252, 3), (block_size // 2, block_size // 4), block_size // 4)
+    pygame.draw.rect(surface, (11, 252, 3),
+                     (block_size // 4 + 1, block_size // 4, block_size // 2 - 1, block_size // 2 + block_size // 4))
+    pygame.draw.circle(surface, (0, 0, 0), (block_size // 2 + 5, block_size // 2 * 0.5), block_size // 15)
     pygame.draw.circle(surface, (0, 0, 0), (block_size // 2 + 5, block_size // 2 * 0.5), block_size // 15)
 
-    screen.blit(surface, (x,y))
+    screen.blit(surface, (x, y))
 
 
 def generate_blok():
@@ -88,21 +101,21 @@ def print_pole_gui(screen):
 
     for y, line in enumerate(pole):
         for x, item in enumerate(line):
-            if item == "@":
+            if item == pacman_s:
                 draw_pacman(screen, x * block_size, y * block_size)
             if item == ".":
-                pygame.draw.circle(screen, (255, 0 , 0), (x * block_size+block_size//2, y * block_size+block_size//2), block_size // 10)
-                # pygame.draw.rect(screen, (255, 0, 0), (
-                #     x * block_size,
-                #     y * block_size,
-                #
-                #     x * block_size + block_size,
-                #     y * block_size + block_size
-                # ))
+                pygame.draw.circle(screen, (255, 0, 0),
+                                   (x * block_size + block_size // 2, y * block_size + block_size // 2),
+                                   block_size // 10)
+            if item == enemy_s:
+                # нарисовать глаза энеми
+                pygame.draw.circle(screen, (72, 9, 88),
+                                   (x * block_size + block_size // 2, y * block_size + block_size // 2),
+                                   block_size // 4)
 
 
-def move(x, y):
-    global PACKMAN_X, PACKMAN_Y, pole, update, food_count, score
+def move(x, y, prev_x, prev_y, s):
+    global pole, update, food_count, score
 
     if x >= width:
         x = 0
@@ -118,47 +131,59 @@ def move(x, y):
 
     # if pole[y][x] == "|" or pole[y][x] == "-":
     #     return
-    #
-    # if pole[y][x] == ".":
-    #     food_count = food_count - 1
-    if pole[y][x] == ".":
-        score += 1
 
-    pole[y][x] = "@"
-    pole[PACKMAN_Y][PACKMAN_X] = symbol
-    PACKMAN_X = x
-    PACKMAN_Y = y
+    if pole[y][x] == ".":
+        food_count = food_count - 1
+    if pole[y][x] == ".":
+        if s == pacman_s:
+            score += 1
+        else:
+            score -= 1
+
+    pole[y][x] = s
+    pole[prev_y][prev_x] = symbol
     update = True
+
+    return x, y
+
+
+def move_pacman(x, y):
+    global PACKMAN_X, PACKMAN_Y
+    PACKMAN_X, PACKMAN_Y = move(x, y, PACKMAN_X, PACKMAN_Y, pacman_s)
+
+
+def move_enemy(x, y):
+    global ENEMY_X, ENEMY_Y
+    ENEMY_X, ENEMY_Y = move(x, y, ENEMY_X, ENEMY_Y, enemy_s)
+
+
+def get_coordinates_by_direction(dir, prev_x, prev_y):
+    if dir == 'left':
+        return prev_x - 1, prev_y
+    if dir == 'right':
+        return prev_x + 1, prev_y
+    if dir == "up":
+        return prev_x, prev_y - 1
+    if dir == "down":
+        return prev_x, prev_y + 1
+
 
 def go_enemy():
     global enemy_last_time
     step_time = int(time.perf_counter() - start_time)
-    if ste
 
-
-
-
-
-
-
-
+    if step_time % 3 == 0 and step_time != enemy_last_time:
+        enemy_last_time = step_time
+        to = random.choice(["left", "right", "up", "down"])
+        x, y = get_coordinates_by_direction(to, ENEMY_X, ENEMY_Y)
+        move_enemy(x, y)
 
 
 def go(dir):
     global direction
-
-    if dir == 'left':
-        direction = "left"
-        move(PACKMAN_X - 1, PACKMAN_Y)
-    if dir == 'right':
-        direction = "right"
-        move(PACKMAN_X + 1, PACKMAN_Y)
-    if dir == "up":
-        direction = "up"
-        move(PACKMAN_X, PACKMAN_Y - 1)
-    if dir == "down":
-        direction = "down"
-        move(PACKMAN_X, PACKMAN_Y + 1)
+    direction = dir
+    x, y = get_coordinates_by_direction(dir, PACKMAN_X, PACKMAN_Y)
+    move_pacman(x, y)
 
 
 def generate_food():
@@ -179,6 +204,7 @@ def chekc_game_end():
     global game_starte
     pass
 
+
 def print_MENU():
     menu_w = width * block_size // 3
     menu_h = height * block_size // 2
@@ -186,19 +212,8 @@ def print_MENU():
 
     surface.fill((145, 36, 103))
 
-
     pygame.draw.rect(
-        surface, (134,20,300),
-        (
-            30,
-            30,
-            menu_w - 60,
-            menu_w // 3 - 60
-        )
-    )
-
-    pygame.draw.rect(
-        surface, (134,20,300),
+        surface, (134, 20, 300),
         (
             30,
             30,
@@ -217,15 +232,17 @@ def print_MENU():
         )
     )
 
-    screen.blit(surface,(width * block_size // 2 - menu_w // 2, height * block_size // 2 - menu_w // 2))
+    pygame.draw.rect(
+        surface, (134, 20, 300),
+        (
+            30,
+            30,
+            menu_w - 60,
+            menu_w // 3 - 60
+        )
+    )
 
-
-
-
-
-
-
-
+    screen.blit(surface, (width * block_size // 2 - menu_w // 2, height * block_size // 2 - menu_w // 2))
 
 
 def map():
@@ -251,8 +268,9 @@ def map():
                 if event.key == pygame.K_RIGHT:
                     go('right')
         print_pole_gui(screen)
-        text_s = font.render(F"score:{score}",False,(255,255,255))
-        screen.blit(text_s, (5,5))
+        text_s = font.render(F"score:{score}", False, (255, 255, 255))
+        screen.blit(text_s, (5, 5))
+        go_enemy()
         pygame.display.update()
         # print_pole()
         clock.tick(10)
