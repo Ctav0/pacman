@@ -22,6 +22,9 @@ start_time = time.perf_counter()
 
 direction = "right"
 enemy_last_time = 0
+MENU, GAME, GAME_OVER = range(3)
+game_state = MENU
+RUNNING = True
 
 enemy_s = "&"
 pacman_s = "@"
