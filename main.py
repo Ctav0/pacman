@@ -4,17 +4,22 @@ import time
 
 import pygame
 
+time_left = 0
+time_for_game = 100
 score = 0
 food_count = 0
 symbol = ' '
 update = True
-ENEMY_X = 0
-ENEMY_Y = 0
+
 PACKMAN_X = 0
 PACKMAN_Y = 0
-width = 14
-height = 12
-block_size = 80
+width = 20
+height = 15
+
+ENEMY_X = width // 2
+ENEMY_Y = height // 2
+
+block_size = 35
 open = True
 pole = []
 
@@ -22,17 +27,20 @@ start_time = time.perf_counter()
 
 direction = "right"
 enemy_last_time = 0
-MENU, GAME, GAME_OVER = range(3)
-game_state = MENU
-RUNNING = True
+MENU, GAME, GAME_OVER, SETTINGS = range(4)
+game_state = SETTINGS
+
 
 enemy_s = "&"
 pacman_s = "@"
+running = True
+
+menu_buttons = []
 
 
 def draw_pacman(screen, x, y):
     surface = pygame.Surface((block_size, block_size))
-    pygame.draw.circle(surface, (21,148,139), (block_size // 2, block_size // 2), block_size // 2)
+    pygame.draw.circle(surface, (21, 148, 139), (block_size // 2, block_size // 2), block_size // 2)
     pygame.draw.circle(surface, (0, 0, 0), (block_size // 2, block_size // 2 * 0.5), block_size // 10)
     if open:
         pygame.draw.polygon(surface, (0, 0, 0), [(block_size // 2, block_size // 2), (block_size, block_size),
@@ -100,7 +108,6 @@ def print_pole():
 
 
 def print_pole_gui(screen):
-    screen.fill((0, 0, 0))
 
     for y, line in enumerate(pole):
         for x, item in enumerate(line):
@@ -118,7 +125,7 @@ def print_pole_gui(screen):
 
 
 def move(x, y, prev_x, prev_y, s):
-    global pole, update, food_count, score
+    global pole, update, food_count, score, running, game_state
 
     if x >= width:
         x = 0
@@ -142,6 +149,9 @@ def move(x, y, prev_x, prev_y, s):
             score += 1
         else:
             score -= 1
+
+    if s == pacman_s and pole[y][x] == enemy_s:
+        game_state = GAME_OVER
 
     pole[y][x] = s
     pole[prev_y][prev_x] = symbol
@@ -204,76 +214,160 @@ def generate_food():
 
 
 def chekc_game_end():
-    global game_starte
+    global game_state
+
+    if PACKMAN_X == ENEMY_X and PACKMAN_Y == ENEMY_Y:
+        game_state = GAME_OVER
+
+
+def start():
+    global game_state
+    game_state = GAME
+
+
+def settings():
     pass
 
 
-def print_MENU():
+def online():
+    pass
+
+
+def donate():
+    pass
+
+
+def exit_():
+    print("test")
+    global running
+    running = False
+
+
+def print_MENU(first = False):
+
     menu_w = width * block_size // 3
     menu_h = height * block_size // 2
+
+    menu_x = width * block_size // 2 - menu_w // 2
+    menu_y = height * block_size // 2 - menu_w // 2
+
     surface = pygame.Surface((menu_w, menu_h))
 
     surface.fill((145, 36, 103))
 
-    pygame.draw.rect(
-        surface, (134, 20, 300),
-        (
-            30,
-            30,
-            menu_w - 60,
-            menu_w // 3 - 60
+    padding = 20
+    bh = menu_w // 3 - padding * 2
+
+    def print_button(x, y, text, fun=lambda: print('test')):
+        bx = x + padding
+        by = y + padding
+
+        bw = menu_w - padding * 2
+
+        pygame.draw.rect(
+            surface, (134, 20, 205),
+            (
+                bx, by,
+                bw,
+                bh
+            )
         )
-    )
 
-    pygame.draw.rect(
-        surface, (134, 20, 300),
-        (
-            30,
-            30,
-            menu_w - 60,
-            menu_w // 3 - 60
-        )
-    )
+        if first:
+            menu_buttons.append((
+                menu_x + bx,
+                menu_y +by,
 
-    pygame.draw.rect(
-        surface, (134, 20, 300),
-        (
-            30,
-            30,
-            menu_w - 60,
-            menu_w // 3 - 60
-        )
-    )
+                menu_x + bx + bw,
+                menu_y +by + bh,
+                fun
+            ))
 
-    screen.blit(surface, (width * block_size // 2 - menu_w // 2, height * block_size // 2 - menu_w // 2))
+        font = pygame.font.SysFont("Arial", 20)
+        text_image = font.render(text, False, (20, 154, 105))
+        surface.blit(text_image,
+                     (bx + bw // 2 - text_image.get_width() // 2, by + bh // 2 - text_image.get_height() // 2))
 
+    print_button(0, 0, "start", start)
+    print_button(0, 40, "settings", settings)
+    print_button(0, 80, "online", online)
+    print_button(0, 120, "donate", donate)
+    print_button(0, 160, "exit", exit_)
+    screen.blit(surface, (menu_x,menu_y))
+
+
+def print_SETTINGS():
+    pass
 
 def map():
-    global screen, clock
+    global screen, clock, running, game_state, time_left
     pygame.font.init()
     font = pygame.font.SysFont("Arial", 20)
 
     generate_food()
     # generate_blok()
-    running = True
+    print_MENU(True)
 
     while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
-                    go('up')
-                if event.key == pygame.K_DOWN:
-                    go('down')
-                if event.key == pygame.K_LEFT:
-                    go('left')
-                if event.key == pygame.K_RIGHT:
-                    go('right')
-        print_pole_gui(screen)
-        text_s = font.render(F"score:{score}", False, (255, 255, 255))
-        screen.blit(text_s, (5, 5))
-        go_enemy()
+        screen.fill((0, 0, 0))
+        if game_state == GAME:
+            time_left = int(time_for_game - (time.perf_counter() - start_time))
+            if time_left == 0:
+                game_state = GAME_OVER
+
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        go('up')
+                    if event.key == pygame.K_DOWN:
+                        go('down')
+                    if event.key == pygame.K_LEFT:
+                        go('left')
+                    if event.key == pygame.K_RIGHT:
+                        go('right')
+            go_enemy()
+            chekc_game_end()
+            print_pole_gui(screen)
+            text_s = font.render(F"score:{score}", False, (255, 255, 255))
+            text_s2 = font.render(F"time_left:{time_left}", False, (255, 255, 255))
+            screen.blit(text_s, (5, 5))
+            screen.blit(text_s2, (5, 25))
+
+        if game_state == GAME_OVER:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+            if score > 10:
+                game_over = font.render("you win", False, (28, 244, 255))
+                screen.blit(game_over, (width * block_size // 2 - game_over.get_width() // 2,
+                                        height * block_size // 2 - game_over.get_height() // 2))
+            else:
+                game_over = font.render("you lox", False, (28, 244, 255))
+                screen.blit(game_over, (width * block_size // 2 - game_over.get_width() // 2,
+                                        height * block_size // 2 - game_over.get_height() // 2))
+
+        if game_state == MENU:
+            print_MENU()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mx, my = event.pos
+
+                    for button in menu_buttons:
+                        x, y, x1, y1, fun = button
+
+                        if x < mx < x1 and y < my < y1:
+                            fun()
+
+        if game_state == SETTINGS:
+            print_SETTINGS()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+
         pygame.display.update()
         # print_pole()
         clock.tick(10)
